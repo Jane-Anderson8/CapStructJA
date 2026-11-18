@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AGE Capital Structure</title>
+  <meta name="description" content="Capital structure calculator for the AGE case: Campus Deli and Sub Shop, Firm U and Firm L.">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <p class="kicker">FIN 4150 · AGE case</p>
+    <h1>Capital Structure Calculator</h1>
+    <p class="lede">What borrowing does to Campus Deli and Sub Shop's (CDSS's) share price, EPS, TIE and cost of capital, plus the case's Firm U and Firm L example. Every number is read from the files in <code>data/</code> and worked out in your browser.</p>
+  </header>
+
+  <main>
+    <div id="status" class="status" role="status">Loading the data files…</div>
+    <div id="warnings"></div>
+
+    <section id="inputs" hidden>
+      <h2>Inputs from <code>data/</code></h2>
+      <dl id="input-list" class="input-list"></dl>
+    </section>
+
+    <section id="firms" hidden>
+      <h2>Firm U and Firm L <span class="tag">question c</span></h2>
+      <p class="note" id="firms-note"></p>
+      <div class="firm-grid">
+        <div class="table-wrap"><table id="firm-u" class="firm-table"></table></div>
+        <div class="table-wrap"><table id="firm-l" class="firm-table"></table></div>
+      </div>
+      <h3>Expected return and risk</h3>
+      <div class="table-wrap"><table id="firm-stats" class="stats-table"></table></div>
+    </section>
+
+    <section id="cdss" hidden>
+      <h2>CDSS at each amount of borrowing</h2>
+      <p class="note" id="cdss-note"></p>
+
+      <h3>Case method: buy back at today's $<span class="p0"></span> <span class="tag">questions d(3), d(4), d(7)</span></h3>
+      <p class="note">Shares repurchased = D / P₀. EPS = net income / shares remaining. Price = EPS / r<sub>s</sub>. WACC uses book weights: D/A × r<sub>d</sub>(1 − T) + (A − D)/A × r<sub>s</sub>.</p>
+      <div class="table-wrap"><table id="case-table" class="cdss-table"></table></div>
+
+      <h3>New-price method: buy back at the price after the announcement</h3>
+      <p class="note">S = net income / r<sub>s</sub>, V = S + D, P = V / n. Shares repurchased = D / P. WACC uses market weights: D/V × r<sub>d</sub>(1 − T) + S/V × r<sub>s</sub>. Checks (✓): EPS = r<sub>s</sub> × P and WACC = EBIT(1 − T) / V.</p>
+      <div class="table-wrap"><table id="new-table" class="cdss-table"></table></div>
+
+      <h3>Which amount of debt is best?</h3>
+      <ul id="best-list" class="best-list"></ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Runs entirely in your browser. Nothing is sent to any other website.</p>
+  </footer>
+
+  <script src="capstruct.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
