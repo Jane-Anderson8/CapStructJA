@@ -7,6 +7,14 @@
   var C = window.CapStruct;
   var r = C.roundHalfUp;
 
+  // Service worker: lets the app install and work offline (see sw.js).
+  // The relative path keeps it inside the repository's GitHub Pages folder.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () { /* the app still works without it */ });
+    });
+  }
+
   // ---------- Formatting (round half up on the decimal value) ----------
 
   function withCommas(x, d) {
