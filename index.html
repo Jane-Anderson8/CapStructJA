@@ -48,6 +48,17 @@
       <h2>CDSS at each amount of borrowing</h2>
       <p class="note" id="cdss-note"></p>
 
+      <div class="lever schedule-loader">
+        <p class="schedule-line">Banker's schedule: <strong id="schedule-name">data/banker_schedule.csv (the AGE case)</strong></p>
+        <div class="buttons">
+          <button type="button" id="btn-load-schedule">Load a schedule</button>
+          <button type="button" id="btn-case-schedule" hidden>Back to the case's banker</button>
+        </div>
+        <input type="file" id="schedule-file" accept=".csv,text/csv" hidden>
+        <p class="note">Pick a CSV file on this device with the columns debt, cost_of_debt and cost_of_equity. The file is read in your browser and never uploaded.</p>
+        <p id="schedule-error" class="warning" role="alert" hidden></p>
+      </div>
+
       <div class="lever">
         <label for="cdss-debt">CDSS's debt: <output id="cdss-debt-out" for="cdss-debt"></output></label>
         <input type="range" id="cdss-debt" min="0" step="1">

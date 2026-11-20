@@ -197,3 +197,4 @@ tr.selected td, tr.selected th { outline: 2px solid var(--accent); outline-offse
   .cdss-table tr.selected { outline: 2px solid var(--accent); }
   .cdss-table tr.selected td { outline: none; }
 }
+.schedule-line { margin: 0 0 8px; overflow-wrap: anywhere; }

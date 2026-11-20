@@ -66,7 +66,8 @@
     setupFirmLever(ex, scenarios, T);
     var res = C.analyzeCDSS(cdss, schedule, T);
     renderCDSS(res, cdss);
-    setupCDSSLever(res, cdss);
+    var lever = setupCDSSLever(res, cdss);
+    setupScheduleLoader(cdss, T, schedule, lever);
     document.getElementById('status').hidden = true;
   }).catch(function (err) {
     var s = document.getElementById('status');
@@ -367,6 +368,20 @@
     }
 
     var b = res.best;
+
+    // Switch to another schedule's results. Stay at the same amount of debt
+    // if the new schedule has it; otherwise go to $0 (or the first row).
+    function update(newRes) {
+      var debtNow = rows[Number(slider.value)] ? rows[Number(slider.value)].debt : null;
+      res = newRes; rows = res.rows; b = res.best;
+      slider.max = rows.length - 1;
+      note.hidden = true;
+      var debts = rows.map(function (r) { return r.debt; });
+      var i = debts.indexOf(debtNow);
+      if (i < 0) i = debts.indexOf(0);
+      show(i < 0 ? 0 : i);
+    }
+
     slider.addEventListener('input', function () { note.hidden = true; show(Number(slider.value)); });
     document.getElementById('btn-best-price').addEventListener('click', function () {
       goTo(b.priceButton, b.casePrice, b.newPrice, 'highest share price', function (m) { return cents(m.price); });
@@ -376,5 +391,54 @@
     });
     var start = rows.map(function (r) { return r.debt; }).indexOf(c.currentDebt);
     show(start < 0 ? 0 : start);
+    return { update: update };
+  }
+
+  // ---------- Part F: load another banker's schedule from this device ----------
+  // FileReader reads the file inside the browser. Nothing is uploaded or sent anywhere.
+
+  function setupScheduleLoader(c, T, caseSchedule, lever) {
+    var input = document.getElementById('schedule-file');
+    var resetBtn = document.getElementById('btn-case-schedule');
+    var label = document.getElementById('schedule-name');
+    var err = document.getElementById('schedule-error');
+
+    function use(schedule, name, isCase) {
+      var res = C.analyzeCDSS(c, schedule, T);
+      renderCDSS(res, c);
+      lever.update(res);
+      label.textContent = name;
+      resetBtn.hidden = isCase;
+      err.hidden = true;
+    }
+
+    document.getElementById('btn-load-schedule').addEventListener('click', function () { input.click(); });
+    input.addEventListener('change', function () {
+      var file = input.files && input.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          var rows = C.parseCSV(reader.result);
+          if (!rows.length || !('debt' in rows[0]) || !('cost_of_debt' in rows[0]) || !('cost_of_equity' in rows[0])) {
+            throw new Error('The file needs the columns debt, cost_of_debt and cost_of_equity, like data/banker_schedule.csv.');
+          }
+          use(C.readSchedule(rows, file.name), file.name + ' (from your device)', false);
+        } catch (e) {
+          err.textContent = 'Could not use ' + file.name + ': ' + e.message + ' The app is still using the previous schedule.';
+          err.hidden = false;
+        }
+        input.value = '';
+      };
+      reader.onerror = function () {
+        err.textContent = 'Could not read ' + file.name + '.';
+        err.hidden = false;
+        input.value = '';
+      };
+      reader.readAsText(file);
+    });
+    resetBtn.addEventListener('click', function () {
+      use(caseSchedule, 'data/banker_schedule.csv (the AGE case)', true);
+    });
   }
 })();
