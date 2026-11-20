@@ -193,14 +193,15 @@
         ebt: ebt,
         taxes: taxes,
         netIncome: ni,
-        roe: ni / equity,
+        roe: equity > 0 ? ni / equity : null,
         tie: interest > 0 ? ebit / interest : null
       };
     });
     var p = years.map(function (y) { return y.probability; });
     var roe = years.map(function (y) { return y.roe; });
-    var eRoe = expected(roe, p);
-    var sRoe = stdDev(roe, p);
+    var hasRoe = roe.every(function (x) { return x !== null; });
+    var eRoe = hasRoe ? expected(roe, p) : null;
+    var sRoe = hasRoe ? stdDev(roe, p) : null;
     var out = {
       assets: A,
       debt: D,
@@ -208,7 +209,7 @@
       years: years,
       eRoe: eRoe,
       sdRoe: sRoe,
-      cvRoe: sRoe / eRoe,
+      cvRoe: hasRoe && eRoe !== 0 ? sRoe / eRoe : null,
       eTie: null,
       sdTie: null
     };
@@ -231,7 +232,37 @@
     };
   }
 
+  // Amounts of debt on the Firm L slider: 0 to slider_max in steps of slider_step.
+  function firmLDebtSteps(ex) {
+    var out = [];
+    if (!(ex.sliderStep > 0)) return [0];
+    for (var i = 0; i * ex.sliderStep <= ex.sliderMax + 1e-9; i++) out.push(i * ex.sliderStep);
+    return out;
+  }
+
   // ---------- CDSS ----------
+
+  // Management's stake after the buyback. Management doesn't sell, so its
+  // shares stay at managementShare x n. status: 'ok', 'all' (no outside
+  // shareholders left, stake 100%) or 'sell' (management would have to sell).
+  function managementStake(c, repurchased, remaining) {
+    var outside = (1 - c.managementShare) * c.shares;
+    var tol = 1e-9 * c.shares;
+    if (Math.abs(repurchased - outside) <= tol) return { stake: 1, status: 'all' };
+    if (repurchased > outside) return { stake: null, status: 'sell' };
+    return { stake: c.managementShare * c.shares / remaining, status: 'ok' };
+  }
+
+  // Where the Best price / Highest EPS buttons send the CDSS debt slider.
+  // caseIdx and newIdx are each method's pick (bestIndex already takes the
+  // smaller debt on an exact tie). Same pick: go there. Different picks:
+  // go to the case method's and say both.
+  function buttonTarget(caseIdx, newIdx) {
+    if (caseIdx < 0 && newIdx < 0) return { index: -1, agree: false };
+    if (caseIdx < 0) return { index: newIdx, agree: false };
+    if (newIdx < 0 || caseIdx === newIdx) return { index: caseIdx, agree: newIdx === caseIdx };
+    return { index: caseIdx, agree: false };
+  }
 
   // EBIT = sales x (1 - variable cost rate) - fixed costs. Constant at every D.
   function cdssEBIT(c) {
@@ -320,6 +351,13 @@
         newM: newPriceMethod(c, ebit, T, s)
       };
     });
+    rows.forEach(function (r) {
+      // CDSS pays out all its earnings, so dividends per share = EPS.
+      r.caseM.dps = r.caseM.eps;
+      r.newM.dps = r.newM.eps;
+      r.caseM.mgmt = managementStake(c, r.caseM.repurchased, r.caseM.remaining);
+      r.newM.mgmt = managementStake(c, r.newM.repurchased, r.newM.remaining);
+    });
 
     var warnings = [];
     // Check: EPS / r_s at $0 should equal today's share price in cdss.csv.
@@ -352,6 +390,8 @@
     };
     var picks = [best.casePrice, best.newPrice, best.bookWacc, best.marketWacc];
     best.allAgree = picks.every(function (i) { return i === picks[0] && i >= 0; });
+    best.priceButton = buttonTarget(best.casePrice, best.newPrice);
+    best.epsButton = buttonTarget(best.caseEps, best.newEps);
 
     return { ebit: ebit, taxRate: T, rows: rows, best: best, zeroCheck: zeroCheck, warnings: warnings };
   }
@@ -369,6 +409,9 @@
     stdDev: stdDev,
     firm: firm,
     exampleFirms: exampleFirms,
+    firmLDebtSteps: firmLDebtSteps,
+    managementStake: managementStake,
+    buttonTarget: buttonTarget,
     cdssEBIT: cdssEBIT,
     caseMethod: caseMethod,
     newPriceMethod: newPriceMethod,

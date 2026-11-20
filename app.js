@@ -23,7 +23,7 @@
   function pct(x) { return (x === null || x === undefined) ? 'n/a' : withCommas(x * 100, 2) + '%'; }
   function times(x) { return (x === null || x === undefined) ? 'n/a' : withCommas(x, 2) + '×'; }
   function count(x) { return (x === null || x === undefined) ? 'n/a' : withCommas(x, 2); }
-  function plain(x, d) { return withCommas(x, d); }
+  function plain(x, d) { return (x === null || x === undefined) ? 'n/a' : withCommas(x, d); }
 
   function el(tag, attrs, text) {
     var e = document.createElement(tag);
@@ -55,8 +55,10 @@
     var scenarios = C.readScenarios(files[4]);
 
     renderInputs(cdss, T);
-    renderFirms(C.exampleFirms(ex, scenarios, T), ex, T);
-    renderCDSS(C.analyzeCDSS(cdss, schedule, T), cdss);
+    setupFirmLever(ex, scenarios, T);
+    var res = C.analyzeCDSS(cdss, schedule, T);
+    renderCDSS(res, cdss);
+    setupCDSSLever(res, cdss);
     document.getElementById('status').hidden = true;
   }).catch(function (err) {
     var s = document.getElementById('status');
@@ -154,6 +156,34 @@
     document.getElementById('firms').hidden = false;
   }
 
+  // Firm L slider: 0 to slider_max in steps of slider_step, rate held at 12%.
+  function setupFirmLever(ex, scenarios, T) {
+    var steps = C.firmLDebtSteps(ex);
+    var slider = document.getElementById('firml-debt');
+    var out = document.getElementById('firml-debt-out');
+    slider.max = steps.length - 1;
+    var caseIdx = steps.indexOf(ex.firmLDebt);
+    document.getElementById('firml-rate-note').textContent =
+      'Firm L\'s interest rate is held at ' + pct(ex.interestRate) + ' at every amount of debt, so the slider shows what debt does to ' +
+      'Firm L\'s return and risk, not how lenders would respond. The Case button goes back to ' + dollars(ex.firmLDebt) + '.';
+    function show(i) {
+      slider.value = i;
+      out.textContent = dollars(steps[i]);
+      slider.setAttribute('aria-valuetext', dollars(steps[i]));
+      renderFirms(C.exampleFirms(ex, scenarios, T, steps[i]), ex, T);
+    }
+    slider.addEventListener('input', function () { show(Number(slider.value)); });
+    var btn = document.getElementById('btn-case');
+    if (caseIdx < 0) {
+      btn.disabled = true;
+      btn.title = 'The case\'s ' + dollars(ex.firmLDebt) + ' is not one of the slider\'s steps.';
+      show(0);
+    } else {
+      btn.addEventListener('click', function () { show(caseIdx); });
+      show(caseIdx);
+    }
+  }
+
   // ---------- CDSS ----------
 
   // columns: [header, fn(row) -> text, bestKey or null]
@@ -188,7 +218,7 @@
       'EBIT is ' + dollars(res.ebit) + ' at every amount of debt, because the case says it is constant. ' +
       'CDSS pays out all its earnings, so dividends per share = EPS and g = 0. ' +
       (res.zeroCheck.ok ? 'Check passed: at $0 of debt, EPS / r_s = ' + cents(res.zeroCheck.implied) + ', today\'s price. ' : '') +
-      'Green cells mark the best amount in each column. Share counts are not rounded; they are shown to two decimals.';
+      'Green cells mark the best amount in each column; the outlined row is the amount on the slider. Share counts are not rounded; they are shown to two decimals.';
 
     var rd = function (x) { return x.rd === null ? '—' : pct(x.rd); };
 
@@ -242,5 +272,101 @@
       : 'These measures do not all point to the same amount of debt, so the app does not pick one.'));
 
     document.getElementById('cdss').hidden = false;
+  }
+
+  // ---------- CDSS debt slider and buttons ----------
+
+  function stakeText(m) {
+    if (m.status === 'sell') return 'Management would have to sell';
+    return pct(m.stake) + (m.status === 'all' ? ' *' : '');
+  }
+
+  function setupCDSSLever(res, c) {
+    var rows = res.rows;
+    var slider = document.getElementById('cdss-debt');
+    var out = document.getElementById('cdss-debt-out');
+    var note = document.getElementById('button-note');
+    slider.max = rows.length - 1;
+
+    function markRow(i) {
+      ['case-table', 'new-table'].forEach(function (id) {
+        var trs = document.getElementById(id).querySelectorAll('tbody tr');
+        Array.prototype.forEach.call(trs, function (tr, j) { tr.classList.toggle('selected', j === i); });
+      });
+    }
+
+    function show(i) {
+      var x = rows[i], cm = x.caseM, nm = x.newM;
+      slider.value = i;
+      out.textContent = dollars(x.debt);
+      slider.setAttribute('aria-valuetext', dollars(x.debt));
+      document.getElementById('lever-rd').textContent = x.rd === null ? '—' : pct(x.rd);
+      document.getElementById('lever-rs').textContent = pct(x.rs);
+
+      var t = document.getElementById('lever-table');
+      t.innerHTML = '';
+      var head = el('thead'), hr = el('tr');
+      ['At ' + dollars(x.debt), 'Case method ($' + plain(c.price, 2) + ' buyback)', 'New-price method'].forEach(function (h) {
+        hr.appendChild(el('th', { scope: 'col' }, h));
+      });
+      head.appendChild(hr);
+      t.appendChild(head);
+      var body = el('tbody');
+      [
+        ['Share price', cents(cm.price), cents(nm.price)],
+        ['Shares repurchased', count(cm.repurchased), count(nm.repurchased)],
+        ['Shares remaining', count(cm.remaining), count(nm.remaining)],
+        ['EPS', cents(cm.eps), cents(nm.eps)],
+        ['Dividends per share', cents(cm.dps), cents(nm.dps)],
+        ['TIE', times(cm.tie), times(nm.tie)],
+        ['WACC', pct(cm.wacc) + ' (book weights)', pct(nm.wacc) + ' (market weights)'],
+        ['Management\'s share', stakeText(cm.mgmt), stakeText(nm.mgmt)]
+      ].forEach(function (cells) {
+        var tr = el('tr');
+        tr.appendChild(el('th', { scope: 'row' }, cells[0]));
+        tr.appendChild(el('td', null, cells[1]));
+        tr.appendChild(el('td', null, cells[2]));
+        body.appendChild(tr);
+      });
+      t.appendChild(body);
+
+      var notes = [];
+      if (cm.mgmt.status === 'all' || nm.mgmt.status === 'all') {
+        notes.push('* The buyback retires every outside share, so no outside shareholders would be left.');
+      }
+      if (cm.mgmt.status === 'sell' || nm.mgmt.status === 'sell') {
+        notes.push('Warning: the buyback needs more shares than outside investors own, so management would have to sell some of its own.');
+      }
+      notes.push('Management owns ' + pct(c.managementShare) + ' today and does not sell, so its share = ' +
+        pct(c.managementShare) + ' × ' + plain(c.shares, 0) + ' / shares remaining.');
+      document.getElementById('mgmt-note').textContent = notes.join(' ');
+      markRow(i);
+    }
+
+    function goTo(target, caseIdx, newIdx, what, value) {
+      if (target.index < 0) return;
+      show(target.index);
+      note.hidden = false;
+      if (target.agree) {
+        note.textContent = 'Both buyback methods give the ' + what + ' at ' + dollars(rows[target.index].debt) + '.';
+      } else if (caseIdx >= 0 && newIdx >= 0) {
+        note.textContent = 'The methods disagree: the case method gives the ' + what + ' at ' + dollars(rows[caseIdx].debt) +
+          ' (' + value(rows[caseIdx].caseM) + ') and the new-price method at ' + dollars(rows[newIdx].debt) +
+          ' (' + value(rows[newIdx].newM) + '). The slider went to the case method\'s amount.';
+      } else {
+        note.textContent = 'Only one method could be worked out here, so the slider went to its amount.';
+      }
+    }
+
+    var b = res.best;
+    slider.addEventListener('input', function () { note.hidden = true; show(Number(slider.value)); });
+    document.getElementById('btn-best-price').addEventListener('click', function () {
+      goTo(b.priceButton, b.casePrice, b.newPrice, 'highest share price', function (m) { return cents(m.price); });
+    });
+    document.getElementById('btn-best-eps').addEventListener('click', function () {
+      goTo(b.epsButton, b.caseEps, b.newEps, 'highest EPS', function (m) { return cents(m.eps); });
+    });
+    var start = rows.map(function (r) { return r.debt; }).indexOf(c.currentDebt);
+    show(start < 0 ? 0 : start);
   }
 })();

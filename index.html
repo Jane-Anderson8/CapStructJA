@@ -27,6 +27,12 @@
     <section id="firms" hidden>
       <h2>Firm U and Firm L <span class="tag">question c</span></h2>
       <p class="note" id="firms-note"></p>
+      <div class="lever">
+        <label for="firml-debt">Firm L's debt: <output id="firml-debt-out" for="firml-debt"></output></label>
+        <input type="range" id="firml-debt" min="0" step="1">
+        <div class="buttons"><button type="button" id="btn-case">Case</button></div>
+        <p class="note" id="firml-rate-note"></p>
+      </div>
       <div class="firm-grid">
         <div class="table-wrap"><table id="firm-u" class="firm-table"></table></div>
         <div class="table-wrap"><table id="firm-l" class="firm-table"></table></div>
@@ -38,6 +44,19 @@
     <section id="cdss" hidden>
       <h2>CDSS at each amount of borrowing</h2>
       <p class="note" id="cdss-note"></p>
+
+      <div class="lever">
+        <label for="cdss-debt">CDSS's debt: <output id="cdss-debt-out" for="cdss-debt"></output></label>
+        <input type="range" id="cdss-debt" min="0" step="1">
+        <div class="buttons">
+          <button type="button" id="btn-best-price">Best price</button>
+          <button type="button" id="btn-best-eps">Highest EPS</button>
+        </div>
+        <p class="note">The slider stops only at the banker's amounts. r<sub>d</sub> = <span id="lever-rd"></span>, r<sub>s</sub> = <span id="lever-rs"></span>.</p>
+        <p id="button-note" class="button-note" role="status" hidden></p>
+        <div class="table-wrap"><table id="lever-table" class="lever-table"></table></div>
+        <p id="mgmt-note" class="note"></p>
+      </div>
 
       <h3>Case method: buy back at today's $<span class="p0"></span> <span class="tag">questions d(3), d(4), d(7)</span></h3>
       <p class="note">Shares repurchased = D / P₀. EPS = net income / shares remaining. Price = EPS / r<sub>s</sub>. WACC uses book weights: D/A × r<sub>d</sub>(1 − T) + (A − D)/A × r<sub>s</sub>.</p>
