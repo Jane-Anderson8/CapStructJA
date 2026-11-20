@@ -153,6 +153,11 @@
     });
   }
 
+  // Dollar amount for warning messages, e.g. 250000 -> "$250,000".
+  function money(x) {
+    return '$' + String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
   // ---------- Statistics ----------
 
   // Expected value = probability-weighted average.
@@ -332,9 +337,9 @@
       }
     }
     rows.forEach(function (r) {
-      if (!r.caseM.feasible) warnings.push('At $' + r.debt + ' of debt, the $20 buyback would retire every share. That row cannot be priced.');
-      if (!r.newM.epsCheckOk) warnings.push('New-price check failed at $' + r.debt + ': EPS does not equal r_s × P.');
-      if (!r.newM.waccCheckOk) warnings.push('New-price check failed at $' + r.debt + ': market WACC does not equal EBIT(1 − T) / V.');
+      if (!r.caseM.feasible) warnings.push('At ' + money(r.debt) + ' of debt, buying back at $' + roundHalfUp(c.price, 2).toFixed(2) + ' would retire every share. That row cannot be priced.');
+      if (!r.newM.epsCheckOk) warnings.push('New-price check failed at ' + money(r.debt) + ': EPS does not equal r_s × P.');
+      if (!r.newM.waccCheckOk) warnings.push('New-price check failed at ' + money(r.debt) + ': market WACC does not equal EBIT(1 − T) / V.');
     });
 
     var best = {

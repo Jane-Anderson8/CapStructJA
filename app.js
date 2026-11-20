@@ -91,7 +91,7 @@
 
   // ---------- Firm U and Firm L ----------
 
-  function firmTable(table, name, f) {
+  function firmTable(table, name, f, T) {
     table.innerHTML = '';
     table.appendChild(el('caption', null, name + (f.debt ? ' (' + dollars(f.debt) + ' of debt)' : ' (no debt)')));
     var head = el('thead');
@@ -115,7 +115,7 @@
     row('EBIT', function (y) { return dollars(y.ebit); }, 'subtotal');
     row('Interest', function (y) { return cost(y.interest); });
     row('EBT', function (y) { return dollars(y.ebt); }, 'subtotal');
-    row('Taxes', function (y) { return cost(y.taxes); });
+    row('Taxes (' + plain(T * 100, 0) + '%)', function (y) { return cost(y.taxes); });
     row('Net income', function (y) { return dollars(y.netIncome); }, 'subtotal');
     row('ROE', function (y) { return pct(y.roe); });
     row('TIE', function (y) { return times(y.tie); });
@@ -126,8 +126,8 @@
     document.getElementById('firms-note').textContent =
       'Both firms have ' + dollars(ex.totalAssets) + ' of assets and a ' + pct(T) + ' tax rate. Firm L borrows ' +
       dollars(firms.L.debt) + ' at ' + pct(ex.interestRate) + '. ROE uses book equity (assets − debt). Firm U pays no interest, so its TIE is n/a.';
-    firmTable(document.getElementById('firm-u'), 'Firm U', firms.U);
-    firmTable(document.getElementById('firm-l'), 'Firm L', firms.L);
+    firmTable(document.getElementById('firm-u'), 'Firm U', firms.U, T);
+    firmTable(document.getElementById('firm-l'), 'Firm L', firms.L, T);
 
     var t = document.getElementById('firm-stats');
     t.innerHTML = '';
